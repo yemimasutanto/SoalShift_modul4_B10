@@ -199,6 +199,8 @@ static int xmp_mkdir(const char *path, mode_t mode)
 	sprintf(fpath, "%s%s",dirpath,new_name);
 	int res;
 
+
+
 	res = mkdir(fpath, mode);
 	if (res == -1)
 		return -errno;
@@ -253,16 +255,16 @@ static int xmp_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 	while ((de = readdir(dp)) != NULL) {
 		char tmp[11511]; // Used to store the decoded string
 		char tmp2[11511]; // Used to 
-        struct stat st;
+		struct stat st;
 		struct stat tmstat;
 		/* --------------------------------- */
 		memset(&st, 0, sizeof(st));
 		st.st_ino = de->d_ino;
 		st.st_mode = de->d_type << 12;
-        
+
 		strcpy(tmp, de->d_name);
 		sprintf(tmp2, "%s/%s", fpath,tmp);
-        decode(tmp);
+		decode(tmp);
 
 		/* Nomor 3 --> Starting to check for username chipset or ic_controller */
 
@@ -297,7 +299,6 @@ static int xmp_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 			f_pointer = fopen(to_miris, "a+"); // a+ untuk append //
 			time_t now_time = time(NULL);
 			
-
 			strftime(time_str, 50, "%H:%M:%S %D-%m-%Y", localtime(&tmstat.st_atime));
 			fprintf(f_pointer, "%s\t%d:%d\t%s\t%s\n", time_str, username->pw_uid, grup->gr_gid, path, tmp);
 			fclose(f_pointer);
