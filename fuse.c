@@ -41,6 +41,46 @@ void decode(char *str) {
     }
 }
 
+// static int xmp_create(const char *path, mode_t mode, struct fuse_file_info *fi)
+// {
+// 	int fd;
+
+// 	fd = open(path, fi->flags, mode);
+// 	if (fd == -1)
+// 		return -errno;
+
+// 	fi->fh = fd;
+// 	return 0;
+// }
+
+// static int xmp_write(const char *path, const char *buf, size_t size,
+// 		     off_t offset, struct fuse_file_info *fi)
+// {
+// 	int res;
+
+// 	(void) path;
+// 	res = pwrite(fi->fh, buf, size, offset);
+// 	if (res == -1)
+// 		res = -errno;
+
+// 	return res;
+// }
+
+static int xmp_mkdir(const char *path, mode_t mode)
+{
+	char new_name[1000], fpath[1000];
+	sprintf(new_name, "%s", path);
+	encode(new_name);
+	sprintf(fpath, "%s%s",dirpath,new_name);
+	int res;
+
+	res = mkdir(fpath, mode);
+	if (res == -1)
+		return -errno;
+
+	return 0;
+}
+
 static int xmp_getattr(const char *path, struct stat *stbuf)
 {
     int res;
@@ -133,6 +173,9 @@ static int xmp_read(const char *path, char *buf, size_t size, off_t offset,
 }
 
 static struct fuse_operations xmp_oper = {
+	// .create		= xmp_create,
+	// .write		= xmp_write,
+	.mkdir		= xmp_mkdir,
 	.getattr	= xmp_getattr,
 	.readdir	= xmp_readdir,
 	.read		= xmp_read,
