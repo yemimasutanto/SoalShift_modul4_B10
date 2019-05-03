@@ -434,22 +434,91 @@ static int xmp_read(const char *path, char *buf, size_t size, off_t offset,
 
 static int xmp_unlink(const char *path)
 {
-	int res;
-	char new_path[1000], fpath[1000];
+	int res, fname_len;
+	char new_path[1000], fpath[1000], ziptext[5] = ".zip";
+	decode(ziptext);
 	sprintf(new_path, "%s", path);
-	printf("%s>>>\n",new_path);
 	
 	char fname_only[1000], ext[1000];
 	memset(fname_only, '\0', sizeof(fname_only));
 	memset(ext, '\0', sizeof(ext));
+	
 	strfindext(fname_only, new_path, ext);
+	fname_len = strlen(fname_only);
 
-	printf("<%s %s>\n", fname_only, ext);
+	/* Making recycle bin folder */
+	char recycle[100] = "/RecycleBin", recycle_path[1000];
+	encode(recycle);
+	sprintf(recycle_path, "%s%s", dirpath,recycle);
+	mkdir(recycle_path, 0755);
+
+	char backup[100] = "/Backup", backup_path[1000];
+	encode(backup);
+	sprintf(backup_path, "%s%s", dirpath,backup);
+	//printf("!! %s !!\n",backup_path);
+	//printf("%s len is %d\n",fname_only, fname_len);
 	
+	// Creating timestamp
+	time_t now = time(NULL);
+	char timestamp[100];
+	strftime(timestamp, 22, "_%Y-%m-%d_%H:%M:%S", localtime(&now));
 	
+	char zip[1000], zip_path[1000];
+	sprintf(zip, "/RecycleBin/%s_deleted%s.zip", fname_only, timestamp);
+	// printf("zip = %s\n",zip_path);
+	encode(zip);
+	sprintf(zip_path, "%s%s", dirpath,zip);
+	// printf("!%s\n",zip_path);
+
+	DIR *dir;
+	struct dirent *de;
+	
+	dir = opendir(backup_path);
+
 	encode(new_path);
 	sprintf(fpath, "%s%s", dirpath,new_path);
-	res = unlink(fpath);
+	
+	pid_t child;
+	child = fork();
+	if (child == 0) {
+		char *argv[] = {"zip", "-q", "-m", "-j", zip_path, fpath, NULL};
+		execv("/usr/bin/zip", argv);
+	} 
+	else {
+		wait(NULL);
+	}
+
+	while((de = readdir(dir)) != NULL)
+	{
+		char temp_name[1000];
+		memset(temp_name, '\0', sizeof(temp_name));
+		sprintf(temp_name, "%s", de->d_name);
+		decode(temp_name);
+		
+		if (strncmp(fname_only, temp_name, fname_len)==0) {
+			char tmp_name2[1000], tmp_path[1001];
+			sprintf(tmp_name2, "%s", temp_name);
+			encode(tmp_name2);
+
+			sprintf(tmp_path, "%s/%s", backup_path, tmp_name2);
+			// printf("tmppath: %s\n",tmp_path);
+
+			pid_t child1;
+			child1 = fork();
+			if (child1 == 0) {
+				char *argv[] = {"zip", "-q", "-m", "-j", "-u", zip_path, tmp_path, NULL};
+				execv("/usr/bin/zip", argv);
+			} 
+			else {
+				wait(NULL);
+			}
+		}
+	}
+	char to_rename[1211];
+	sprintf(to_rename, "%s%s", zip_path,".zip");
+	rename(to_rename, zip_path);
+	
+	//res = unlink(fpath);
 	if (res == -1)
 		return -errno;
 
